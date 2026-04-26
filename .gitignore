@@ -1,0 +1,5 @@
+node_modules/
+backend/data/tasks.json
+backend/uploads/
+.env
+.DS_Store
