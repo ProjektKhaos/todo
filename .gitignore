@@ -1,5 +1,10 @@
 node_modules/
-backend/data/tasks.json
-backend/uploads/
+data/todos.json
+uploads/images/*
+uploads/audio/*
+uploads/video/*
+!uploads/images/.gitkeep
+!uploads/audio/.gitkeep
+!uploads/video/.gitkeep
 .env
 .DS_Store
