@@ -1,5 +1,6 @@
 node_modules/
 data/todos.json
+data/users.json
 uploads/images/*
 uploads/audio/*
 uploads/video/*

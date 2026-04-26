@@ -8,6 +8,10 @@ require_once __DIR__ . '/config.php';
 
 class UploadHandler
 {
+    private const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    private const ALLOWED_AUDIO_MIME = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/ogg', 'application/ogg', 'audio/mp4', 'audio/x-m4a'];
+    private const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime'];
+
     /**
      * Hantera ett <input type="file" name="X[]" multiple> fält.
      * Returnerar lista med relativa sökvägar (uploads/...).
@@ -52,10 +56,10 @@ class UploadHandler
 
     private function saveOne(array $file, string $kind): ?string
     {
-        [$dir, $allowedExt, $maxSize, $relDir] = match ($kind) {
-            'image' => [UPLOAD_IMAGES, ALLOWED_IMAGE_EXT, MAX_IMAGE_SIZE, 'uploads/images'],
-            'audio' => [UPLOAD_AUDIO,  ALLOWED_AUDIO_EXT, MAX_AUDIO_SIZE, 'uploads/audio'],
-            'video' => [UPLOAD_VIDEO,  ALLOWED_VIDEO_EXT, MAX_VIDEO_SIZE, 'uploads/video'],
+        [$dir, $allowedExt, $maxSize, $relDir, $allowedMime] = match ($kind) {
+            'image' => [UPLOAD_IMAGES, ALLOWED_IMAGE_EXT, MAX_IMAGE_SIZE, 'uploads/images', self::ALLOWED_IMAGE_MIME],
+            'audio' => [UPLOAD_AUDIO,  ALLOWED_AUDIO_EXT, MAX_AUDIO_SIZE, 'uploads/audio',  self::ALLOWED_AUDIO_MIME],
+            'video' => [UPLOAD_VIDEO,  ALLOWED_VIDEO_EXT, MAX_VIDEO_SIZE, 'uploads/video',  self::ALLOWED_VIDEO_MIME],
             default => throw new InvalidArgumentException('Okänd filtyp: ' . $kind),
         };
 
@@ -81,6 +85,11 @@ class UploadHandler
             throw new RuntimeException('Filtypen är inte tillåten för ' . $kind . ': .' . $ext);
         }
 
+        $mime = $this->detectMime((string)$file['tmp_name']);
+        if ($mime !== null && !$this->mimeMatches($mime, $allowedMime)) {
+            throw new RuntimeException('Filens innehåll matchar inte filtypen (' . $mime . ').');
+        }
+
         $base = $this->safeBase($origName);
         $stamp = date('Ymd_His');
         $rand  = bin2hex(random_bytes(2));
@@ -104,6 +113,33 @@ class UploadHandler
         @chmod($dest, 0644);
 
         return $relDir . '/' . $name;
+    }
+
+    private function detectMime(string $tmp): ?string
+    {
+        if ($tmp === '' || !is_readable($tmp)) return null;
+        if (function_exists('finfo_open')) {
+            $fi = @finfo_open(FILEINFO_MIME_TYPE);
+            if ($fi) {
+                $mime = @finfo_file($fi, $tmp) ?: null;
+                @finfo_close($fi);
+                return $mime ? strtolower($mime) : null;
+            }
+        }
+        if (function_exists('mime_content_type')) {
+            $mime = @mime_content_type($tmp);
+            return $mime ? strtolower($mime) : null;
+        }
+        return null;
+    }
+
+    private function mimeMatches(string $mime, array $allowed): bool
+    {
+        $mime = strtolower($mime);
+        foreach ($allowed as $a) {
+            if ($mime === strtolower($a)) return true;
+        }
+        return false;
     }
 
     private function safeBase(string $name): string

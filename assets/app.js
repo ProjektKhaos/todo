@@ -21,6 +21,7 @@
 
     let dragId = null;
     let sourceCol = null;
+    let justDragged = false;
 
     function onDragStart(e) {
         dragId = this.dataset.id;
@@ -32,6 +33,8 @@
     function onDragEnd() {
         this.classList.remove('dragging');
         dragId = null;
+        justDragged = true;
+        setTimeout(() => { justDragged = false; }, 50);
         document.querySelectorAll('.kanban-col.drag-over').forEach(c => c.classList.remove('drag-over'));
     }
     function onDragOver(e) { e.preventDefault(); this.classList.add('drag-over'); e.dataTransfer.dropEffect = 'move'; }
@@ -88,6 +91,102 @@
     function cssEscape(s) {
         if (window.CSS && CSS.escape) return CSS.escape(s);
         return String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+    }
+
+    // Klick på kort → öppna modal
+    const modal = document.getElementById('taskModal');
+    if (modal) {
+        board.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (justDragged) return;
+                if (e.target.closest('audio, video, a, button')) return;
+                openModal(card);
+            });
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(card); }
+            });
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target.matches('[data-close]')) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.hidden) closeModal();
+        });
+    }
+
+    function openModal(card) {
+        if (!modal) return;
+        modal.querySelector('#taskModalTitle').textContent = card.dataset.rubrik || '';
+
+        const status = modal.querySelector('[data-field="status"]');
+        const statusClass = card.className.split(/\s+/).find(c => c.startsWith('status-')) || '';
+        status.className = 'status-pill ' + statusClass;
+        status.textContent = card.dataset.status || '';
+
+        setChip(modal.querySelector('[data-field="kategori"]'), card.dataset.kategori);
+        setChip(modal.querySelector('[data-field="plats"]'), card.dataset.plats ? '📍 ' + card.dataset.plats : '');
+
+        modal.querySelector('[data-field="tid_kvar"]').textContent = card.dataset.tidKvar || '';
+
+        const ds = card.dataset.datumStart, de = card.dataset.datumSlut;
+        const datesParts = [];
+        if (ds) datesParts.push('Start: ' + ds);
+        if (de) datesParts.push('Slut: ' + de);
+        modal.querySelector('[data-field="datum"]').textContent = datesParts.join(' · ');
+
+        const textEl = modal.querySelector('[data-field="text"]');
+        textEl.textContent = card.dataset.text || '';
+
+        const mediaEl = modal.querySelector('[data-field="media"]');
+        mediaEl.innerHTML = '';
+        appendMedia(mediaEl, card.dataset.bilder, 'img');
+        appendMedia(mediaEl, card.dataset.ljud,  'audio');
+        appendMedia(mediaEl, card.dataset.film,  'video');
+
+        const editBtn = modal.querySelector('[data-field="edit"]');
+        if (card.dataset.editUrl) {
+            editBtn.href = card.dataset.editUrl;
+            editBtn.hidden = false;
+        } else {
+            editBtn.hidden = true;
+        }
+
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+    }
+
+    function closeModal() {
+        if (!modal) return;
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+        const mediaEl = modal.querySelector('[data-field="media"]');
+        if (mediaEl) mediaEl.querySelectorAll('audio, video').forEach(m => m.pause());
+    }
+
+    function setChip(el, text) {
+        if (!el) return;
+        if (text) { el.textContent = text; el.hidden = false; }
+        else { el.textContent = ''; el.hidden = true; }
+    }
+
+    function appendMedia(host, json, kind) {
+        if (!json) return;
+        let arr;
+        try { arr = JSON.parse(json); } catch { return; }
+        if (!Array.isArray(arr) || !arr.length) return;
+        arr.forEach(src => {
+            let el;
+            if (kind === 'img') {
+                el = document.createElement('img');
+                el.src = src; el.alt = '';
+            } else {
+                el = document.createElement(kind);
+                el.controls = true; el.src = src; el.preload = 'metadata';
+            }
+            host.appendChild(el);
+        });
     }
 
     // Sök i tavlan

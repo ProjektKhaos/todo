@@ -55,9 +55,8 @@ const BLOCKED_EXT = ['php', 'phtml', 'phar', 'phps', 'htaccess', 'exe', 'sh', 'b
 // Statusar
 const STATUSAR = ['ny', 'pågår', 'väntar', 'klar', 'pausad'];
 
-// Admin-lösenord. Standard: "admin" — byt direkt i produktion.
-// Generera nytt med: php -r "echo password_hash('mittlösen', PASSWORD_DEFAULT), PHP_EOL;"
-const ADMIN_PASSWORD_HASH = '$2y$12$kJqwecsJfRQuKrLnJECj9OUV4CjkYjr79yHLJNmURLThYbao5Hc3.';
+// Användare hanteras i data/users.json via app/UserRepository.php.
+// Ägaren skapas första gången filen saknas (Hans Åberg / hanabe001).
 
 // Session
 const SESSION_NAME = 'todo_admin_sess';

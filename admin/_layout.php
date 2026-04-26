@@ -8,6 +8,7 @@ if (!function_exists('admin_header')) {
 function admin_header(string $title): void {
     $ok  = flash_get('ok');
     $err = flash_get('error');
+    $cu  = current_user();
     ?>
 <!DOCTYPE html>
 <html lang="sv">
@@ -19,16 +20,22 @@ function admin_header(string $title): void {
 </head>
 <body class="page-admin">
 <header class="topbar">
-    <div class="brand">
-        <span class="brand-mark">✓</span>
+    <a class="brand" href="<?= e(url('index.php')) ?>">
+        <?= brand_mark(28) ?>
         <span class="brand-name"><?= e(APP_NAME) ?></span>
         <span class="brand-sub">Admin</span>
-    </div>
+    </a>
     <nav class="topnav">
         <a href="<?= e(url('admin/index.php')) ?>">Aktiva</a>
         <a href="<?= e(url('admin/index.php?view=arkiv')) ?>">Arkiv</a>
+        <?php if (is_owner()): ?>
+            <a href="<?= e(url('admin/users.php')) ?>">Användare</a>
+        <?php endif; ?>
         <a class="btn btn-primary" href="<?= e(url('admin/create.php')) ?>">+ Ny uppgift</a>
         <a href="<?= e(url('index.php')) ?>">Tavla</a>
+        <?php if ($cu): ?>
+            <span class="me" title="<?= e($cu['username'] . ($cu['role']==='owner' ? ' · ägare' : '')) ?>">👤 <?= e($cu['name']) ?></span>
+        <?php endif; ?>
         <a href="<?= e(url('admin/logout.php')) ?>">Logga ut</a>
     </nav>
 </header>

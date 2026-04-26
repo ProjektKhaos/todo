@@ -38,13 +38,34 @@ function start_admin_session(): void
 function is_admin(): bool
 {
     start_admin_session();
-    return !empty($_SESSION['admin_logged_in']);
+    return !empty($_SESSION['admin_logged_in']) && !empty($_SESSION['user']);
 }
 
 function require_admin(): void
 {
     if (!is_admin()) {
         redirect('admin/login.php');
+    }
+}
+
+function current_user(): ?array
+{
+    start_admin_session();
+    return $_SESSION['user'] ?? null;
+}
+
+function is_owner(): bool
+{
+    $u = current_user();
+    return $u !== null && ($u['role'] ?? '') === 'owner';
+}
+
+function require_owner(): void
+{
+    require_admin();
+    if (!is_owner()) {
+        http_response_code(403);
+        exit('Endast ägaren har tillgång till denna sida.');
     }
 }
 
@@ -144,6 +165,26 @@ function format_dt(?string $dt): string
     $t = strtotime($dt);
     if ($t === false) return $dt;
     return date('Y-m-d H:i', $t);
+}
+
+function brand_mark(int $size = 32): string
+{
+    $s = (int)$size;
+    return <<<SVG
+<svg class="brand-mark" width="$s" height="$s" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <defs>
+        <linearGradient id="brandBg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#5a8bff"/>
+            <stop offset="100%" stop-color="#1a4ed1"/>
+        </linearGradient>
+    </defs>
+    <rect width="32" height="32" rx="9" fill="url(#brandBg)"/>
+    <path d="M8.5 12 L11 14.5 L14.5 10.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="16.5" y="11.2" width="8.5" height="1.8" rx="0.9" fill="#ffffff" opacity="0.9"/>
+    <path d="M8.5 21 L11 23.5 L14.5 19.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+    <rect x="16.5" y="20.2" width="8.5" height="1.8" rx="0.9" fill="#ffffff" opacity="0.55"/>
+</svg>
+SVG;
 }
 
 function format_local(?string $dt): string
